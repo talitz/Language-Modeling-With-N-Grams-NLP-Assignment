@@ -2,6 +2,7 @@ from collections import Counter
 import collections 
 import re
 import random
+import math
 
 class Ngram_Language_Model:
     """The class implements a Markov Language Model that learns amodel from a given text.
@@ -95,11 +96,12 @@ class Ngram_Language_Model:
                 #print("Full Sentence Output now is = {}".format(full_output_sentence))
                 current_ngram = chosen_ngram
             
-        i = self.n
+        i = current_ngram_length
         #print("Full Sentence Output = {}".format(full_output_sentence))
             
-        #iterate until we get to n words total, including the first self.n words we found already
-        while i < n-6:
+        #iterate until we get to n words total
+        while i < n-1:
+            #print("We have {} words count so far, can still add more words to our sentence".format(i))
             #calculating the new gram to be completed
             current_ngram = current_ngram.split(' ')
             current_ngram.reverse()
@@ -129,7 +131,7 @@ class Ngram_Language_Model:
                 #print("Appending the completed ngram that was found to our sentence = {}".format(chosen_ngram))
                 full_output_sentence.append(chosen_ngram.split(' ')[-1])
                 #print("Full Sentence Output now is = {}".format(full_output_sentence))
-                i = i + self.n
+                i = i + 1
                 current_ngram = chosen_ngram
         return ' '.join(full_output_sentence)
             
@@ -144,7 +146,86 @@ class Ngram_Language_Model:
            Returns:
                Float. The float should reflect the (log) probability.
         """
+        #print("Evaluating: {}".format(text))
+        sum_likelihood = 0.0
+        split_text = text.split()
+        for index in range(len(split_text)):
+            count_seq = 0
+            count_prefix = 0
+            #print("index = {}, split_text = {}".format(index,split_text))
+            given_text = normalize_text(text)
+            #print("normalize text = {}".format(given_text))
+            if index - (self.n - 1) < 0:
+                prefix = ' '.join([x for x in split_text[0:index]])
+                suffix = split_text[index]
+                #print("prefix = {}".format(prefix))
+                #print("suffix = {}".format(suffix))
+                if not self.chars:
+                    seq = prefix + ' ' + suffix
+                else:
+                    seq = prefix + suffix
+                if index == 0:
+                    seq = seq.replace(' ', '')
+                    #print("seq = {}".format(seq))
+                    for key, value in self.ngrams_dictionaries[self.n].items():
+                        if key.startswith(seq):
+                            count_seq = count_seq + value
+                    count_prefix = count_prefix + len(self.text.split()) - self.n + 1
+                else:
+                    #print("seq = {}".format(seq))
+                    #print("count_seq = {}".format(count_seq))
+                    for key, value in self.ngrams_dictionaries[self.n].items():
+                            if key.startswith(seq):
+                                count_seq = count_seq + value
+                                #print("count_seq = {}".format(count_seq))
+                                #print("key = {} STARTS!!! with = {}".format(key,seq))
+                            #else:
+                                #print("key = {} doesn't start with = {}".format(key,seq))
+                    count_prefix = self._count_check_anagram(prefix)
+                #print("count_prefix = {}".format(count_prefix))
+                #print("count_seq = {}".format(count_seq))
+            else:
+                prefix = split_text[(index - self.n + 1): index]
+                suffix = split_text[index]
+                #print("prefix = {}".format(prefix))
+                #print("suffix = {}".format(suffix))
+                if self.chars:
+                    seq = (''.join([x for x in prefix])) + suffix
+                else:
+                    seq = (' '.join([x for x in prefix])) + ' ' + suffix
+                if seq not in self.ngrams_dictionaries[self.n].keys():
+                    return math.log(self.smooth(seq))
+                count_seq = 0
+                for key, value in self.ngrams_dictionaries[self.n].items():
+                        if key.startswith(seq):
+                            count_seq = count_seq + value
+                        #else:
+                            #print("key = {} doesn't start with = {}".format(key,seq))
+                count_prefix = 0
+                for key, value in self.ngrams_dictionaries[self.n].items():
+                        if key.startswith(' '.join(prefix)):
+                            count_prefix = count_prefix + value
+                #print("count_prefix = {}".format(count_prefix))
+                #print("count_seq = {}".format(count_seq))
+            sum_likelihood += math.log((count_seq / count_prefix))   
+            #print("------------")
+        #print("sum of likelihood = {}".format(sum_likelihood))
+        return sum_likelihood
 
+    def _count_check_anagram(self, prefix):
+        """count how many the given prefix is part of the vocabulary of our model.
+                   Args:
+                       prefix (string): the prefix of the key
+                   Returns:
+                       the count of occuraences of the given prefix in the vocabulary of the model.
+        """
+        counter = 0
+        dict = self.ngrams_dictionaries[self.n]
+        for key, value in self.ngrams_dictionaries[self.n].items():
+            if key.startswith(prefix):
+                counter += value
+        return counter
+      
     def smooth(self, ngram):
         """Returns the smoothed (Laplace) probability of the specified ngram.
 
@@ -154,6 +235,10 @@ class Ngram_Language_Model:
             Returns:
                 float. The smoothed probability.
         """
+        vocabulary_count = len(set(self.arr))
+        ngram_count = self.dictionary[ngram]
+        total_ngram_count = len(self.dictionary.keys())
+        return (ngram_count + 1) / (total_ngram_count + vocabulary_count)
 
 def normalize_text(text):
     """Returns a normalized string based on the specifiy string.
