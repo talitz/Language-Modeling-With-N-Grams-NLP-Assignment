@@ -235,9 +235,9 @@ class Ngram_Language_Model:
             Returns:
                 float. The smoothed probability.
         """
-        vocabulary_count = len(set(self.arr))
-        ngram_count = self.dictionary[ngram]
-        total_ngram_count = len(self.dictionary.keys())
+        vocabulary_count = len(set(self.text.split()))
+        ngram_count = self.ngrams_dictionaries[self.n][ngram]
+        total_ngram_count = len(self.ngrams_dictionaries[self.n].keys())
         return (ngram_count + 1) / (total_ngram_count + vocabulary_count)
 
 def normalize_text(text):
