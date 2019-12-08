@@ -187,9 +187,9 @@ class Ngram_Language_Model:
                     count_prefix = self._count_check_anagram(prefix)
                     #print("count_prefix = {}".format(count_prefix))
                     #print("count_seq = {}".format(count_seq))
-                    if count_seq == 0:
-                        #print("seq = {}, smoothing!".format(seq))
-                        return math.log(self.smooth(seq))
+                if count_seq == 0:
+                    #print("seq = {}, smoothing!".format(seq))
+                    return math.log(self.smooth(seq))
             else:
                 #print("flow 2")
                 prefix = split_text[(index - self.n + 1): index]
